@@ -1,51 +1,118 @@
 local player = game.Players.LocalPlayer
 
--- Load the Teleport DS library
-print("Loading Teleport DS library...")
-local TeleportDS = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Orion/main/source'))()
+-- Load the Orion library
+local OrionLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Orion/main/source'))()
 
 -- Create the main window
-print("Creating main window...")
-local Window = TeleportDS:MakeWindow({Name = "Teleport DS", HidePremium = false, SaveConfig = true, ConfigFolder = "TeleportDS"})
-
--- Create a new tab
-print("Creating tab...")
-local Tab = Window:MakeTab({
-    Name = "Teleports",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
+local Window = OrionLib:MakeWindow({
+    Name = "Dinosaur Skin Dupe",
+    HidePremium = false,
+    SaveConfig = true,
+    ConfigFolder = "OrionDinosaurSkinConfig"
 })
 
--- Add buttons for teleportation
-print("Adding buttons...")
-Tab:AddButton({
-    Name = "Default Map 2018-2019",
+-- Create the main tab for Dinosaur Skins
+local DinosaurSkinTab = Window:MakeTab({
+    Name = "Dinosaur Skin",
+    Icon = "rbxassetid://4483362458"
+})
+
+-- Function to reinitialize, register, and save tokens in the trading map
+local function reinitializeRegisterAndSaveTokens(dinoName, duplicateCount)
+    local memoryCard = player:FindFirstChild("MemoryCard")
+    if not memoryCard then
+        memoryCard = Instance.new("Folder")
+        memoryCard.Name = "MemoryCard"
+        memoryCard.Parent = player
+    end
+
+    local tokens = memoryCard:FindFirstChild("Tokens")
+    if not tokens then
+        tokens = Instance.new("Folder")
+        tokens.Name = "Tokens"
+        tokens.Parent = memoryCard
+    end
+
+    -- Check if the player has the existing skin as a folder
+    local existingSkinFolder = tokens:FindFirstChild(dinoName)
+    if existingSkinFolder then
+        -- Iterate over each instance of the existing skin and duplicate it
+        for i = 1, duplicateCount do
+            local newSkinFolder = existingSkinFolder:Clone()
+            newSkinFolder.Parent = tokens
+
+            -- Ensure the new folder is visible and functions as a true skin
+            newSkinFolder:SetAttribute("Tradeable", true)  -- Make the folder tradeable
+            newSkinFolder:SetAttribute("Visible", true)    -- Make the folder visible
+
+            local dinosaurs = memoryCard:FindFirstChild("Dinosaurs")
+            if not dinosaurs then
+                dinosaurs = Instance.new("Folder")
+                dinosaurs.Name = "Dinosaurs"
+                dinosaurs.Parent = memoryCard
+            end
+
+            local dinoFolder = dinosaurs:FindFirstChild(dinoName)
+            if not dinoFolder then
+                dinoFolder = Instance.new("Folder")
+                dinoFolder.Name = dinoName
+                dinoFolder.Parent = dinosaurs
+            else
+                local newDinoFolder = dinoFolder:Clone()
+                newDinoFolder.Parent = dinosaurs
+            end
+
+            -- Register each duplicate individually in the game
+            pcall(function()
+                workspace.GameFunctions.UpdateObtainedDinosDS:InvokeServer(dinoName)
+            end)
+        end
+
+        -- Force a refresh on the tokens to ensure recognition and saving
+        pcall(function()
+            workspace.GameFunctions.getPlayerData:InvokeServer()
+        end)
+
+        -- Force a save on the player's data to ensure persistence using UpdateObtainedTokensDS in trading map
+        pcall(function()
+            workspace.GameFunctions.UpdateObtainedTokensDS:InvokeServer()
+        end)
+    end
+end
+
+-- Text input to enter dinosaur name
+local dinosaurNameInput
+
+DinosaurSkinTab:AddTextbox({
+    Name = "Dinosaur Name",
+    Default = "",
+    TextDisappear = false,
+    Callback = function(value)
+        dinosaurNameInput = value
+    end
+})
+
+-- Text input to enter number of duplicates
+local duplicateCountInput
+
+DinosaurSkinTab:AddTextbox({
+    Name = "Duplicate Count",
+    Default = "10",  -- Default to duplicating 10 instances
+    TextDisappear = false,
+    Callback = function(value)
+        duplicateCountInput = tonumber(value)
+    end
+})
+
+-- Button to duplicate the existing skin and ensure it is registered and saved
+DinosaurSkinTab:AddButton({
+    Name = "Get Skin",
     Callback = function()
-        print("Teleporting to Default Map 2018-2019")
-        local teleportService = game:GetService("TeleportService")
-        teleportService:Teleport(15918631033, player)
-    end    
+        if dinosaurNameInput and dinosaurNameInput ~= "" and duplicateCountInput then
+            reinitializeRegisterAndSaveTokens(dinosaurNameInput, duplicateCountInput)
+        end
+    end
 })
 
-Tab:AddButton({
-    Name = "Gallus Island",
-    Callback = function()
-        print("Teleporting to Gallus Island")
-        local teleportService = game:GetService("TeleportService")
-        teleportService:Teleport(794299040, player)
-    end    
-})
-
-Tab:AddButton({
-    Name = "Homelands",
-    Callback = function()
-        print("Teleporting to Homelands")
-        local teleportService = game:GetService("TeleportService")
-        teleportService:Teleport(16211666354, player)
-    end    
-})
-
--- Initialize the GUI
-print("Initializing GUI...")
-TeleportDS:Init()
-print("Script executed successfully!")
+-- Initialize Orion
+OrionLib:Init()
